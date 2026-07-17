@@ -15,8 +15,10 @@ function makeBody(type, x, y, opts = {}) {
     invMass: 1 / (def.r * def.r),
     alive: true,
     settled: false,
+    stillTime: 0,
     mergeLock: 0,
     born: 0,          // pop-in scale timer
+    age: 0,           // seconds in play (for danger grace)
     dangerTimer: 0,
     dropped: !!opts.dropped,
   };
@@ -29,6 +31,15 @@ function speed(b) {
 function integrate(bodies, dt) {
   for (const b of bodies) {
     if (!b.alive) continue;
+    // Hard-slept bodies skip integration so a dense pile stops jittering.
+    if (b.settled && speed(b) < SLEEP_SPEED * 0.5) {
+      b.vx = 0;
+      b.vy = 0;
+      if (b.mergeLock > 0) b.mergeLock -= dt;
+      if (b.born < 1) b.born = Math.min(1, b.born + dt * 6);
+      b.age = (b.age || 0) + dt;
+      continue;
+    }
     b.vy += GRAVITY * dt;
     b.vx *= FRICTION;
     b.vy *= FRICTION;
@@ -36,6 +47,7 @@ function integrate(bodies, dt) {
     b.y += b.vy * dt;
     if (b.mergeLock > 0) b.mergeLock -= dt;
     if (b.born < 1) b.born = Math.min(1, b.born + dt * 6);
+    b.age = (b.age || 0) + dt;
   }
 }
 
@@ -61,7 +73,7 @@ function resolveWalls(bodies) {
       b.vx *= GROUND_FRICTION;
       if (Math.abs(b.vy) < SLEEP_SPEED) b.vy = 0;
     }
-    // soft ceiling — don't hard clamp so danger works; just mild bounce if somehow above bin top
+    // soft ceiling — mild bounce if way above the bin
     if (b.y - b.r < BIN.top - 40) {
       b.y = BIN.top - 40 + b.r;
       b.vy = Math.abs(b.vy) * 0.2;
@@ -88,6 +100,14 @@ function resolvePairs(bodies) {
         dist = 0.01;
       }
       if (dist >= minDist) continue;
+
+      // Wake sleeping bodies on contact with a moving one
+      if (a.settled || b.settled) {
+        a.settled = false;
+        b.settled = false;
+        a.stillTime = 0;
+        b.stillTime = 0;
+      }
 
       const nx = dx / dist;
       const ny = dy / dist;
@@ -119,7 +139,7 @@ function resolvePairs(bodies) {
       // light tangential friction
       const tx = -ny, ty = nx;
       const velT = rvx * tx + rvy * ty;
-      const jt = -velT / invSum * 0.15;
+      const jt = -velT / invSum * 0.22;
       a.vx -= jt * tx * a.invMass;
       a.vy -= jt * ty * a.invMass;
       b.vx += jt * tx * b.invMass;
@@ -152,6 +172,26 @@ function findMerges(bodies) {
   return pairs;
 }
 
+function updateSleep(bodies, dt) {
+  for (const b of bodies) {
+    if (!b.alive) continue;
+    const sp = speed(b);
+    if (sp < SLEEP_SPEED) {
+      b.stillTime = (b.stillTime || 0) + dt;
+      if (b.stillTime >= SLEEP_TIME) {
+        b.vx = 0;
+        b.vy = 0;
+        b.settled = true;
+      } else {
+        b.settled = false;
+      }
+    } else {
+      b.stillTime = 0;
+      b.settled = false;
+    }
+  }
+}
+
 function stepPhysics(bodies, dt) {
   const h = dt / SUBSTEPS;
   for (let s = 0; s < SUBSTEPS; s++) {
@@ -160,8 +200,5 @@ function stepPhysics(bodies, dt) {
     resolvePairs(bodies);
     resolveWalls(bodies);
   }
-  for (const b of bodies) {
-    if (!b.alive) continue;
-    b.settled = speed(b) < SLEEP_SPEED;
-  }
+  updateSleep(bodies, dt);
 }
