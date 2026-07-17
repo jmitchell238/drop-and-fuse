@@ -1,19 +1,28 @@
 'use strict';
 
 const cv = document.getElementById('cv');
+const stage = document.getElementById('stage');
 let ctx = null;
 let last = performance.now();
 let pointerDown = false;
 let aiming = false;
+let activePointerId = null;
 
 function setScreen(name) {
   document.querySelectorAll('.screen').forEach(el => {
     el.classList.toggle('hidden', el.dataset.screen !== name);
   });
+  // Play chrome is not a .screen (full-screen overlays break iPad canvas hits)
+  document.querySelectorAll('.play-chrome').forEach(el => {
+    el.classList.toggle('hidden', name !== 'play');
+  });
 }
 
 function showMenu() {
   state = 'menu';
+  aiming = false;
+  pointerDown = false;
+  activePointerId = null;
   updateMenuStats();
   setScreen('menu');
   // Flush any SW update that waited for the run to end.
@@ -26,10 +35,16 @@ function showMenu() {
 
 function showPlay() {
   startGame();
+  aiming = false;
+  pointerDown = false;
+  activePointerId = null;
   setScreen('play');
 }
 
 function showOver() {
+  aiming = false;
+  pointerDown = false;
+  activePointerId = null;
   setScreen('over');
   document.getElementById('overScore').textContent = String(score);
   document.getElementById('overBest').textContent = String(save.best);
@@ -78,20 +93,17 @@ function frame(now) {
       }, true);
     }
 
-    // bodies sorted by size for nicer overlap (small on top? large on top looks better)
     const sorted = bodies.slice().sort((a, b) => a.r - b.r);
     for (const b of sorted) drawOrb(ctx, b);
 
     drawParticles(ctx);
     drawHud(ctx, score, Math.max(save.best, score), nextType);
 
-    // merge flash
     if (lastMergeFlash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${lastMergeFlash * 0.25})`;
       ctx.fillRect(BIN.left, BIN.top, BIN_W, BIN_H);
     }
   } else {
-    // idle preview orbs for menu backdrop
     drawIdleDecor(ctx, now);
   }
 
@@ -108,42 +120,118 @@ function drawIdleDecor(ctx, now) {
   }
 }
 
-// ---------- input ----------
-function onPointerDown(e) {
+// ---------- input (pointer + touch; stage-level so nothing covers the canvas) ----------
+function canvasRect() {
+  return cv.getBoundingClientRect();
+}
+
+function beginAim(clientX, clientY, pointerId, target) {
   ensureAudio();
-  if (state !== 'play') return;
+  const rect = canvasRect();
+  if (!shouldBeginAim({ state, target, rect })) return false;
+
+  const x = aimFromClient({
+    clientX, clientY, rect, stageW: W, stageH: H, holdType, clampHoldX,
+  });
+  if (x == null) return false;
+
   pointerDown = true;
   aiming = true;
-  cv.setPointerCapture(e.pointerId);
-  const p = screenToStage(e.clientX, e.clientY, cv);
-  holdX = clampHoldX(p.x, holdType);
+  activePointerId = pointerId;
+  holdX = x;
+  return true;
 }
 
-function onPointerMove(e) {
+function moveAim(clientX, clientY, pointerId) {
   if (state !== 'play' || !aiming) return;
-  const p = screenToStage(e.clientX, e.clientY, cv);
-  holdX = clampHoldX(p.x, holdType);
+  if (pointerId != null && activePointerId != null && pointerId !== activePointerId) return;
+  const x = aimFromClient({
+    clientX, clientY, rect: canvasRect(), stageW: W, stageH: H, holdType, clampHoldX,
+  });
+  if (x != null) holdX = x;
 }
 
-function onPointerUp(e) {
-  if (state !== 'play') {
-    pointerDown = false;
-    aiming = false;
-    return;
-  }
-  if (aiming) {
-    const p = screenToStage(e.clientX, e.clientY, cv);
-    holdX = clampHoldX(p.x, holdType);
+function endAim(clientX, clientY, pointerId) {
+  if (pointerId != null && activePointerId != null && pointerId !== activePointerId) return;
+
+  if (shouldDropOnRelease({ state, aiming, canDrop })) {
+    if (clientX != null && clientY != null) {
+      const x = aimFromClient({
+        clientX, clientY, rect: canvasRect(), stageW: W, stageH: H, holdType, clampHoldX,
+      });
+      if (x != null) holdX = x;
+    }
     dropOrb();
   }
   pointerDown = false;
   aiming = false;
+  activePointerId = null;
 }
 
-cv.addEventListener('pointerdown', onPointerDown);
-cv.addEventListener('pointermove', onPointerMove);
-cv.addEventListener('pointerup', onPointerUp);
-cv.addEventListener('pointercancel', () => { pointerDown = false; aiming = false; });
+function onPointerDown(e) {
+  if (beginAim(e.clientX, e.clientY, e.pointerId, e.target)) {
+    e.preventDefault();
+    try { stage.setPointerCapture(e.pointerId); } catch (_) { /* iOS may throw */ }
+  }
+}
+
+function onPointerMove(e) {
+  if (!aiming) return;
+  e.preventDefault();
+  moveAim(e.clientX, e.clientY, e.pointerId);
+}
+
+function onPointerUp(e) {
+  if (!aiming && !pointerDown) return;
+  e.preventDefault();
+  endAim(e.clientX, e.clientY, e.pointerId);
+  try { stage.releasePointerCapture(e.pointerId); } catch (_) { /* ok */ }
+}
+
+function onPointerCancel(e) {
+  pointerDown = false;
+  aiming = false;
+  activePointerId = null;
+}
+
+// Touch fallbacks: some iPad Simulator / older WebKit paths are flaky with Pointer Events only
+function touchClient(e) {
+  const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+  if (!t) return null;
+  return { x: t.clientX, y: t.clientY, id: t.identifier, target: e.target };
+}
+
+function onTouchStart(e) {
+  const t = touchClient(e);
+  if (!t) return;
+  if (beginAim(t.x, t.y, t.id, t.target)) e.preventDefault();
+}
+
+function onTouchMove(e) {
+  if (!aiming) return;
+  const t = touchClient(e);
+  if (!t) return;
+  e.preventDefault();
+  moveAim(t.x, t.y, t.id);
+}
+
+function onTouchEnd(e) {
+  if (!aiming && !pointerDown) return;
+  const t = touchClient(e);
+  e.preventDefault();
+  endAim(t ? t.x : null, t ? t.y : null, t ? t.id : null);
+}
+
+// Listen on STAGE (not only canvas) so hits aren't lost to sibling chrome / transforms
+const ptrOpts = { passive: false };
+stage.addEventListener('pointerdown', onPointerDown, ptrOpts);
+stage.addEventListener('pointermove', onPointerMove, ptrOpts);
+stage.addEventListener('pointerup', onPointerUp, ptrOpts);
+stage.addEventListener('pointercancel', onPointerCancel, ptrOpts);
+stage.addEventListener('touchstart', onTouchStart, ptrOpts);
+stage.addEventListener('touchmove', onTouchMove, ptrOpts);
+stage.addEventListener('touchend', onTouchEnd, ptrOpts);
+stage.addEventListener('touchcancel', onPointerCancel, ptrOpts);
 
 // keyboard
 addEventListener('keydown', e => {
@@ -182,7 +270,8 @@ document.getElementById('btnMenu').addEventListener('click', () => {
   sfxClick();
   showMenu();
 });
-document.getElementById('btnPauseMenu').addEventListener('click', () => {
+document.getElementById('btnPauseMenu').addEventListener('click', e => {
+  e.stopPropagation();
   sfxClick();
   showMenu();
 });
@@ -207,7 +296,6 @@ function applyVersionLabels() {
 // ---------- PWA + auto-update (same pattern as VoidRush / hole-game) ----------
 function safeReloadForUpdate() {
   if (window.__reloaded) return;
-  // Don't yank the player mid-run; reload from menu / game-over only.
   if (state === 'play') {
     window.__pendingReload = true;
     return;
@@ -253,7 +341,6 @@ function registerSW() {
     });
   }).catch(err => console.warn('[sw] register failed', err));
 
-  // Hard fallback: if shell is stale but network has a newer GAME_VERSION, reload.
   function checkRemoteVersion() {
     if (state === 'play') return;
     fetch('js/config.js', { cache: 'no-store' })

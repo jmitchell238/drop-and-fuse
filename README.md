@@ -26,6 +26,15 @@ Same scheme as VoidRush (`hole-game`):
 - Keep `CACHE` in `sw.js` in sync: `'drop-and-fuse-' + GAME_VERSION`
 - SW + remote `config.js` version check auto-reload when not mid-game
 
+## Tests
+
+```bash
+node tests/run.mjs
+```
+
+Covers drop rules (including the “first ball won’t drop” regression), merge/physics,
+input aim helpers, version format, and HTML structure (no full-screen play overlay).
+
 ## Local
 
 ```bash

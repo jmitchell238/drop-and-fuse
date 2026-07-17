@@ -47,8 +47,8 @@ function resetRun() {
 function startGame() {
   resetRun();
   state = 'play';
-  sfxClick();
-  ensureAudio();
+  if (typeof sfxClick === 'function') sfxClick();
+  if (typeof ensureAudio === 'function') ensureAudio();
 }
 
 function clampHoldX(x, type) {
@@ -56,9 +56,10 @@ function clampHoldX(x, type) {
   return Math.max(BIN.left + r, Math.min(BIN.right - r, x));
 }
 
-function queueOrb() {
-  if (state !== 'play' || !canDrop) return;
-  if (bodies.length >= MAX_BODIES) return;
+/** Drop the held orb. Returns true if a body was spawned. */
+function dropOrb() {
+  if (state !== 'play' || !canDrop) return false;
+  if (bodies.length >= MAX_BODIES) return false;
 
   const type = holdType;
   const x = clampHoldX(holdX, type);
@@ -71,7 +72,8 @@ function queueOrb() {
   nextType = randDropType();
   canDrop = false;
   dropTimer = DROP_COOLDOWN;
-  sfxDrop();
+  if (typeof sfxDrop === 'function') sfxDrop();
+  return true;
 }
 
 function applyMerges() {
@@ -98,11 +100,11 @@ function applyMerges() {
     merges += 1;
     if (newType > biggest) biggest = newType;
 
-    spawnPop(mx, my, ORBS[newType].glow, ORBS[newType].r);
-    sfxMerge(newType);
+    if (typeof spawnPop === 'function') {
+      spawnPop(mx, my, ORBS[newType].glow, ORBS[newType].r);
+    }
+    if (typeof sfxMerge === 'function') sfxMerge(newType);
     lastMergeFlash = 0.18;
-
-    // Max orb bonus pop — optional remove of max for score spam; keep it.
   }
 
   bodies = bodies.filter(b => b.alive);
@@ -133,7 +135,7 @@ function endGame(reason) {
   if (state !== 'play') return;
   state = 'over';
   overReason = reason || 'Game over';
-  sfxGameOver();
+  if (typeof sfxGameOver === 'function') sfxGameOver();
   recordGameEnd(score, biggest, merges);
   updateMenuStats();
 }
@@ -157,13 +159,14 @@ function updatePlay(dt) {
   applyMerges();
   // Second merge pass catches chains in same frame
   applyMerges();
-  updateParticles(dt);
+  if (typeof updateParticles === 'function') updateParticles(dt);
   checkDanger(dt);
 
   if (lastMergeFlash > 0) lastMergeFlash -= dt;
 }
 
 function updateMenuStats() {
+  if (typeof document === 'undefined' || !document.getElementById) return;
   const bestEl = document.getElementById('statBest');
   const gamesEl = document.getElementById('statGames');
   const bigEl = document.getElementById('statBiggest');
