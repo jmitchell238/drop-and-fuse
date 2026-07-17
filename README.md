@@ -32,8 +32,15 @@ Same scheme as VoidRush (`hole-game`):
 node tests/run.mjs
 ```
 
-Covers drop rules (including the “first ball won’t drop” regression), merge/physics,
-input aim helpers, version format, and HTML structure (no full-screen play overlay).
+Covers:
+
+- First-drop / iPad input regression
+- Merge, chain merge, max-tier no-merge
+- Physics (fall, settle, walls)
+- Danger-line game over
+- Save / high score persistence
+- Version ↔ service worker cache sync
+- PWA shell (no full-screen play overlay)
 
 ## Local
 
