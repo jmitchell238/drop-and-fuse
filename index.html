@@ -50,11 +50,9 @@
       </div>
     </div>
 
-    <!-- PLAY overlay controls -->
-    <div class="screen play-ui hidden" data-screen="play" id="screenPlay">
-      <button id="btnPauseMenu" class="icon-btn" type="button" title="Menu">☰</button>
-      <p class="hint">Drag to aim · release to drop</p>
-    </div>
+    <!-- PLAY chrome (NOT a full-screen layer — that blocked iPad touches on the canvas) -->
+    <button id="btnPauseMenu" class="icon-btn play-chrome hidden" type="button" title="Menu">☰</button>
+    <p id="playHint" class="hint play-chrome hidden">Tap or drag to aim · release to drop</p>
 
     <!-- GAME OVER -->
     <div class="screen hidden" data-screen="over" id="screenOver">
@@ -83,6 +81,7 @@
   <script src="js/physics.js"></script>
   <script src="js/particles.js"></script>
   <script src="js/render.js"></script>
+  <script src="js/input.js"></script>
   <script src="js/game.js"></script>
   <script src="js/main.js"></script>
 </body>

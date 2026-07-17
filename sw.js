@@ -1,5 +1,5 @@
 // Bump with GAME_VERSION in js/config.js (MAJOR.MINOR.PATCH).
-const CACHE = 'drop-and-fuse-1.0.001';
+const CACHE = 'drop-and-fuse-1.0.002';
 
 const ASSETS = [
   './',
@@ -11,6 +11,7 @@ const ASSETS = [
   './js/physics.js',
   './js/particles.js',
   './js/render.js',
+  './js/input.js',
   './js/game.js',
   './js/main.js',
   './manifest.webmanifest',

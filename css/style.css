@@ -65,7 +65,8 @@ html, body {
 
 #cv:active { cursor: grabbing; }
 
-/* screens sit on top of canvas, same box */
+/* Menu / game-over screens sit on top of canvas.
+   Play chrome is ONLY the menu button + hint — never a full-screen hit target. */
 .screen {
   position: absolute;
   inset: 0;
@@ -87,14 +88,8 @@ html, body {
   z-index: 5;
 }
 
-.play-ui {
-  pointer-events: none;
-  z-index: 4;
-  background: transparent;
-}
-
-.play-ui .icon-btn {
-  pointer-events: auto;
+.play-chrome {
+  z-index: 6;
 }
 
 .menu-card {
@@ -272,8 +267,8 @@ button {
   position: absolute;
   top: calc(10px + var(--safe-top));
   left: 10px;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: rgba(8, 12, 24, 0.65);
@@ -283,6 +278,8 @@ button {
   place-items: center;
   pointer-events: auto;
   z-index: 6;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .icon-btn:hover { background: rgba(255, 255, 255, 0.12); }
@@ -300,9 +297,6 @@ button {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   pointer-events: none;
 }
-
-/* When play screen is active, only show its chrome */
-.screen.play-ui.hidden { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
