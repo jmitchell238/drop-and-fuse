@@ -60,7 +60,7 @@ function loadGame() {
     globalThis.__TEST__ = {
       GAME_VERSION, GAME_VERSION_LABEL, GAME_NAME,
       W, H, BIN, ORBS, DROP_Y, DROP_TYPES, DROP_COOLDOWN, MAX_TYPE, MAX_BODIES,
-      DANGER_Y, DANGER_HOLD, GRAVITY, MERGE_COOLDOWN,
+      DANGER_Y, DANGER_HOLD, DANGER_GRACE, DANGER_STILL, GRAVITY, MERGE_COOLDOWN,
       state: () => state,
       setState: (s) => { state = s; },
       bodies: () => bodies,
@@ -75,8 +75,10 @@ function loadGame() {
       setHoldType: (t) => { holdType = t; },
       dropTimer: () => dropTimer,
       overReason: () => overReason,
+      dangerPulse: () => dangerPulse,
       startGame, resetRun, dropOrb, clampHoldX, updatePlay, applyMerges, endGame, checkDanger,
-      makeBody, findMerges, stepPhysics, resolveWalls,
+      isAboveDangerLine, isRestingForDanger,
+      makeBody, findMerges, stepPhysics, resolveWalls, speed,
       isUiChromeTarget, clientToStage, shouldBeginAim, aimFromClient, shouldDropOnRelease,
       save, loadSave, defaultSave, recordGameEnd, persist, SAVE_KEY,
     };
@@ -261,20 +263,66 @@ section('danger line game over');
 {
   const { api: g } = loadGame();
   g.startGame();
-  // Settled body straddling danger line
-  const b = g.makeBody(2, (g.BIN.left + g.BIN.right) / 2, g.DANGER_Y);
+  // Settled body with top clearly above danger line
+  const b = g.makeBody(2, (g.BIN.left + g.BIN.right) / 2, g.DANGER_Y - 10);
   b.born = 1;
+  b.age = g.DANGER_GRACE + 0.5;
   b.settled = true;
+  b.vx = 0; b.vy = 0;
   b.dangerTimer = 0;
   g.setBodies([b]);
-  // Simulate checkDanger directly over hold time
+  assert(g.isAboveDangerLine(b), 'fixture is above danger line');
   let steps = 0;
   while (g.state() === 'play' && steps < 200) {
     g.checkDanger(0.1);
     steps++;
   }
-  assertEq(g.state(), 'over', 'overflow ends game');
+  assertEq(g.state(), 'over', 'overflow ends game when settled above line');
   assert(String(g.overReason()).length > 0, 'has over reason');
+}
+
+section('danger line ends even when pile is jittering (full-bin bug)');
+{
+  const { api: g } = loadGame();
+  g.startGame();
+  // Simulate a dense pile: orb above line with micro-velocity that would
+  // fail the old `settled` (speed < SLEEP_SPEED ~18) check forever.
+  const b = g.makeBody(3, (g.BIN.left + g.BIN.right) / 2, g.DANGER_Y - 20);
+  b.born = 1;
+  b.age = g.DANGER_GRACE + 1;
+  b.settled = false;
+  b.vx = 25;
+  b.vy = -15; // speed ≈ 29 — above SLEEP, below DANGER_STILL
+  b.dangerTimer = 0;
+  g.setBodies([b]);
+  assert(g.isAboveDangerLine(b), 'jitter fixture is above line');
+  assert(g.isRestingForDanger(b), 'jitter counts as resting for danger');
+  assert(g.speed(b) > 18, 'fixture is NOT physics-settled (old bug condition)');
+
+  let steps = 0;
+  while (g.state() === 'play' && steps < 200) {
+    // keep micro-jitter so settled stays false
+    b.settled = false;
+    b.vx = 25;
+    b.vy = -15;
+    g.checkDanger(0.1);
+    steps++;
+  }
+  assertEq(g.state(), 'over', 'full bin with jitter must still end the game');
+}
+
+section('fresh drop above line does not instantly kill');
+{
+  const { api: g } = loadGame();
+  g.startGame();
+  const b = g.makeBody(0, (g.BIN.left + g.BIN.right) / 2, g.DROP_Y);
+  b.born = 0.2;
+  b.age = 0.05; // still in grace
+  b.settled = false;
+  b.dangerTimer = 0;
+  g.setBodies([b]);
+  for (let i = 0; i < 5; i++) g.checkDanger(0.1);
+  assertEq(g.state(), 'play', 'grace protects falling drop');
 }
 
 section('save / high score');

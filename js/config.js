@@ -7,7 +7,7 @@
 //   minor — features (systems, big content)
 //   patch — bugfixes, perf, polish
 // Keep CACHE in sw.js in sync: 'drop-and-fuse-' + GAME_VERSION
-const GAME_VERSION = '1.0.003';
+const GAME_VERSION = '1.0.004';
 const GAME_VERSION_LABEL = 'v' + GAME_VERSION;
 const GAME_NAME = 'Drop & Fuse';
 
@@ -26,17 +26,21 @@ const BIN = {
 const BIN_W = BIN.right - BIN.left;
 const BIN_H = BIN.bottom - BIN.top;
 
-// Danger line: settle above this too long → game over
-const DANGER_Y = BIN.top + 52;
-const DANGER_HOLD = 1.15; // seconds above line while nearly still
+// Danger line (y increases downward). Drop spawns ABOVE this line; pieces
+// that stay above it after a grace period end the run.
+const DANGER_Y = BIN.top + 72;
+const DANGER_HOLD = 0.85;       // seconds continuously in the danger zone
+const DANGER_GRACE = 0.55;      // ignore freshly dropped orbs this long
+const DANGER_STILL = 140;       // speed threshold for "resting" (lenient — pile jitters)
 
 // Physics
 const GRAVITY = 1850;
-const RESTITUTION = 0.18;
-const FRICTION = 0.992;
-const GROUND_FRICTION = 0.88;
-const WALL_FRICTION = 0.98;
-const SLEEP_SPEED = 18;
+const RESTITUTION = 0.12;
+const FRICTION = 0.988;
+const GROUND_FRICTION = 0.82;
+const WALL_FRICTION = 0.96;
+const SLEEP_SPEED = 22;
+const SLEEP_TIME = 0.12;        // must stay slow this long before hard-sleep
 const MERGE_COOLDOWN = 0.08;
 const DROP_COOLDOWN = 0.35;
 const MAX_BODIES = 80;

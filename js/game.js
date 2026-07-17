@@ -110,21 +110,49 @@ function applyMerges() {
   bodies = bodies.filter(b => b.alive);
 }
 
+/** True when any part of the orb is above the danger line (smaller y). */
+function isAboveDangerLine(b) {
+  return (b.y - b.r) < DANGER_Y;
+}
+
+/**
+ * True when the orb is resting enough to count toward a loss.
+ * Uses a lenient speed cap — dense piles micro-jitter and never hit
+ * physics `settled` (speed < SLEEP_SPEED), which used to prevent game over.
+ */
+function isRestingForDanger(b) {
+  if (b.settled) return true;
+  return speed(b) < DANGER_STILL;
+}
+
 function checkDanger(dt) {
   let anyDanger = false;
   for (const b of bodies) {
     if (!b.alive) continue;
-    // Only count pieces that have been in play and are nearly settled
-    const top = b.y - b.r;
-    if (top < DANGER_Y && b.settled && b.born >= 1) {
-      b.dangerTimer += dt;
+
+    // Fresh drops spawn above the line while falling — never count them yet.
+    if ((b.age || 0) < DANGER_GRACE || b.born < 0.6) {
+      b.dangerTimer = 0;
+      continue;
+    }
+
+    if (isAboveDangerLine(b)) {
       anyDanger = true;
+      // Resting on the pile past the line → fill the lose timer.
+      // Still flying upward after a bounce → tick slower, but do NOT reset
+      // (resetting on jitter was why full bins never ended).
+      if (isRestingForDanger(b)) {
+        b.dangerTimer = (b.dangerTimer || 0) + dt;
+      } else {
+        b.dangerTimer = (b.dangerTimer || 0) + dt * 0.35;
+      }
       if (b.dangerTimer >= DANGER_HOLD) {
         endGame('The bin overflowed!');
         return;
       }
     } else {
-      b.dangerTimer = Math.max(0, b.dangerTimer - dt * 2);
+      // Clearly below the line — clear.
+      b.dangerTimer = 0;
     }
   }
   if (anyDanger) dangerPulse += dt;
