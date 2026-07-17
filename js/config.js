@@ -1,7 +1,15 @@
 'use strict';
 // Drop & Fuse — tuning knobs
 
-const GAME_VERSION = '1.0.0';
+// ---- Version (MAJOR.MINOR.PATCH) --------------------------------------------
+// Shown in the UI as "Drop & Fuse vMAJOR.MINOR.PPP" (patch zero-padded to 3 digits).
+//   major — breaking / generation changes
+//   minor — features (systems, big content)
+//   patch — bugfixes, perf, polish
+// Keep CACHE in sw.js in sync: 'drop-and-fuse-' + GAME_VERSION
+const GAME_VERSION = '1.0.001';
+const GAME_VERSION_LABEL = 'v' + GAME_VERSION;
+const GAME_NAME = 'Drop & Fuse';
 
 // Logical stage size (letterboxed to fit screen)
 const W = 390;

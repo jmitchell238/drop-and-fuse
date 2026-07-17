@@ -1,4 +1,5 @@
-const CACHE = 'drop-and-fuse-1.0.0';
+// Bump with GAME_VERSION in js/config.js (MAJOR.MINOR.PATCH).
+const CACHE = 'drop-and-fuse-1.0.001';
 
 const ASSETS = [
   './',

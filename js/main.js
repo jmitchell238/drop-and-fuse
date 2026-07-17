@@ -16,6 +16,12 @@ function showMenu() {
   state = 'menu';
   updateMenuStats();
   setScreen('menu');
+  // Flush any SW update that waited for the run to end.
+  if (window.__pendingReload) {
+    window.__pendingReload = false;
+    window.__reloaded = true;
+    location.reload();
+  }
 }
 
 function showPlay() {
@@ -33,6 +39,12 @@ function showOver() {
   document.getElementById('overReason').textContent = overReason;
   const isNew = score > 0 && score >= save.best;
   document.getElementById('newBest').classList.toggle('hidden', !isNew || score === 0);
+  // Flush any SW update that waited for the run to end.
+  if (window.__pendingReload) {
+    window.__pendingReload = false;
+    window.__reloaded = true;
+    location.reload();
+  }
 }
 
 function frame(now) {
@@ -181,13 +193,88 @@ document.getElementById('muteBtn').addEventListener('click', () => {
   sfxClick();
 });
 
-// PWA
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+// ---------- version UI ----------
+function applyVersionLabels() {
+  const label = GAME_NAME + ' ' + GAME_VERSION_LABEL;
+  const tag = document.getElementById('versionTag');
+  const menu = document.getElementById('versionMenu');
+  const over = document.getElementById('versionOver');
+  if (tag) tag.textContent = label;
+  if (menu) menu.textContent = label + ' · PWA ready';
+  if (over) over.textContent = label;
+}
+
+// ---------- PWA + auto-update (same pattern as VoidRush / hole-game) ----------
+function safeReloadForUpdate() {
+  if (window.__reloaded) return;
+  // Don't yank the player mid-run; reload from menu / game-over only.
+  if (state === 'play') {
+    window.__pendingReload = true;
+    return;
+  }
+  window.__reloaded = true;
+  location.reload();
+}
+
+function activateWaitingWorker(reg) {
+  if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+}
+
+function watchInstallingWorker(reg) {
+  const worker = reg.installing;
+  if (!worker) return;
+  worker.addEventListener('statechange', () => {
+    if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+      worker.postMessage({ type: 'SKIP_WAITING' });
+    }
+  });
+}
+
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  if (!(location.protocol === 'https:' || location.hostname === 'localhost' ||
+        location.hostname === '127.0.0.1')) return;
+
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    activateWaitingWorker(reg);
+    if (reg.installing) watchInstallingWorker(reg);
+    reg.addEventListener('updatefound', () => watchInstallingWorker(reg));
+
+    const checkForUpdate = () => { reg.update().catch(() => {}); };
+    checkForUpdate();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) checkForUpdate();
+    });
+    window.addEventListener('focus', checkForUpdate);
+    setInterval(checkForUpdate, 60 * 1000);
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      safeReloadForUpdate();
+    });
+  }).catch(err => console.warn('[sw] register failed', err));
+
+  // Hard fallback: if shell is stale but network has a newer GAME_VERSION, reload.
+  function checkRemoteVersion() {
+    if (state === 'play') return;
+    fetch('js/config.js', { cache: 'no-store' })
+      .then(r => r.ok ? r.text() : '')
+      .then(text => {
+        const m = text.match(/GAME_VERSION\s*=\s*['"]([^'"]+)['"]/);
+        if (m && m[1] && m[1] !== GAME_VERSION) safeReloadForUpdate();
+      })
+      .catch(() => {});
+  }
+  checkRemoteVersion();
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkRemoteVersion();
+  });
+  setInterval(checkRemoteVersion, 2 * 60 * 1000);
 }
 
 // boot
+applyVersionLabels();
 updateMenuStats();
 setScreen('menu');
+registerSW();
 ({ ctx } = resizeCanvas(cv));
 requestAnimationFrame(t => { last = t; frame(t); });
