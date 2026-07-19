@@ -137,13 +137,21 @@ function drawOrb(ctx, body, ghost = false) {
   ctx.ellipse(x - r * 0.28, y - r * 0.32, r * 0.28, r * 0.16, -0.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // tiny type mark for larger orbs
-  if (r > 22 && !ghost) {
-    ctx.fillStyle = 'rgba(10,14,28,0.35)';
-    ctx.font = `800 ${Math.max(10, r * 0.42)}px system-ui,sans-serif`;
+  // Name on mid/large orbs (same names used on the end screen — no mystery numbers).
+  // Small orbs stay pure color so kids match by look, not by reading.
+  if (!ghost && r >= 28 && def.label) {
+    ctx.fillStyle = 'rgba(10,14,28,0.42)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(body.type + 1), x, y + 1);
+    if (r >= 48) {
+      const size = Math.min(15, Math.max(10, r * 0.28));
+      ctx.font = `800 ${size}px system-ui,sans-serif`;
+      ctx.fillText(def.label, x, y + 1);
+    } else {
+      // First letter only when the full name won't fit
+      ctx.font = `800 ${Math.max(11, r * 0.38)}px system-ui,sans-serif`;
+      ctx.fillText(def.label.charAt(0), x, y + 1);
+    }
   }
 
   ctx.restore();
@@ -201,15 +209,26 @@ function drawHud(ctx, score, best, nextType) {
 }
 
 function drawGuide(ctx, x, type) {
-  const r = ORBS[type].r;
+  const def = ORBS[type];
+  const r = def.r;
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1;
+  // Straight drop path — makes it obvious shots are not angled
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 6]);
   ctx.beginPath();
   ctx.moveTo(x, DROP_Y + r + 4);
   ctx.lineTo(x, BIN.bottom - 4);
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // Name under the ghost so kids connect color ↔ name while aiming
+  if (def.label) {
+    ctx.fillStyle = 'rgba(200, 210, 240, 0.7)';
+    ctx.font = '700 11px system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(def.label, x, DROP_Y + r + 8);
+  }
   ctx.restore();
 }

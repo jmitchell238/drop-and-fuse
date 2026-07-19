@@ -25,7 +25,7 @@
       <div class="menu-card">
         <img class="logo-icon" src="icons/icon-192.png" alt="" width="72" height="72" />
         <h1><span class="c1">Drop</span> &amp; <span class="c2">Fuse</span></h1>
-        <p class="tagline">Stack · match · merge · don’t overflow</p>
+        <p class="tagline">Drop · match two · fuse bigger · don’t overflow</p>
 
         <div class="stats">
           <div><span class="lbl">Best</span><strong id="statBest">0</strong></div>
@@ -39,11 +39,13 @@
 
         <div id="howPanel" class="how hidden">
           <ol>
-            <li>Drag left/right, then release to <b>drop</b> an orb.</li>
-            <li>Two orbs of the <b>same size</b> touch → they <b>fuse</b> into the next size.</li>
-            <li>Chain merges for big scores. Don’t let the pile cross the <b>danger line</b>.</li>
+            <li><b>Slide left or right</b>, then release to drop. Orbs always fall <b>straight down</b> (no angled shots).</li>
+            <li>Match <b>exactly two</b> of the same color &amp; size — they <b>fuse</b> into the next bigger orb. (Three in a pile still fuse two at a time.)</li>
+            <li>Same-looking orbs fuse when they <b>touch</b>. Bigger orbs show their <b>name</b> (Spark → Mint → Solar…).</li>
+            <li>Chain fuses for big scores. Don’t let the pile rest past the red <b>danger line</b>.</li>
             <li>Keys: ← → move, Space/Enter drop, Esc menu.</li>
           </ol>
+          <div id="orbLadder" class="orb-ladder" aria-hidden="true"></div>
         </div>
 
         <p id="versionMenu" class="ver"></p>
@@ -52,7 +54,7 @@
 
     <!-- PLAY chrome (NOT a full-screen layer — that blocked iPad touches on the canvas) -->
     <button id="btnPauseMenu" class="icon-btn play-chrome hidden" type="button" title="Menu">☰</button>
-    <p id="playHint" class="hint play-chrome hidden">Tap or drag to aim · release to drop</p>
+    <p id="playHint" class="hint play-chrome hidden">Slide left/right · release to drop straight down</p>
 
     <!-- GAME OVER -->
     <div class="screen hidden" data-screen="over" id="screenOver">

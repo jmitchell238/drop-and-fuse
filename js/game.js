@@ -201,8 +201,7 @@ function updateMenuStats() {
   if (bestEl) bestEl.textContent = String(save.best);
   if (gamesEl) gamesEl.textContent = String(save.games);
   if (bigEl) {
-    const name = save.biggest > 0 ? ORBS[save.biggest].label : '—';
-    bigEl.textContent = name;
+    formatBiggestLabel(bigEl, save.biggest);
   }
   const muteBtn = document.getElementById('muteBtn');
   if (muteBtn) muteBtn.textContent = save.muted ? '🔇 Sound off' : '🔊 Sound on';
@@ -213,4 +212,21 @@ function screenToStage(clientX, clientY, cv) {
   const x = ((clientX - rect.left) / rect.width) * W;
   const y = ((clientY - rect.top) / rect.height) * H;
   return { x, y };
+}
+
+/**
+ * Show biggest orb as colored name (same identity kids see on the balls).
+ * @param {HTMLElement} el
+ * @param {number} type
+ */
+function formatBiggestLabel(el, type) {
+  if (!el) return;
+  if (!(type > 0) || !ORBS[type]) {
+    el.textContent = '—';
+    el.style.color = '';
+    return;
+  }
+  const def = ORBS[type];
+  el.textContent = def.label;
+  el.style.color = def.color;
 }

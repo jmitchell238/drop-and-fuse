@@ -8,10 +8,13 @@ Neon orb merge puzzle — drop, match, fuse, don’t overflow the bin.
 
 | Input | Action |
 |-------|--------|
-| Drag + release | Aim and drop |
+| Drag left/right + release | Choose drop column (always falls straight down) |
 | ← → / A D | Move |
 | Space / Enter / ↓ | Drop |
 | Esc | Menu |
+
+**Fuse rule:** two orbs of the **same size/color** fuse when they **touch**.
+Three in a pile still fuse two at a time. Orbs show **names** (Spark, Mint…), not mystery numbers.
 
 ## Stack
 

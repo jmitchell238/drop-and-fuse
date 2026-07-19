@@ -49,8 +49,7 @@ function showOver() {
   document.getElementById('overScore').textContent = String(score);
   document.getElementById('overBest').textContent = String(save.best);
   document.getElementById('overMerges').textContent = String(merges);
-  document.getElementById('overBiggest').textContent =
-    biggest > 0 ? ORBS[biggest].label : '—';
+  formatBiggestLabel(document.getElementById('overBiggest'), biggest);
   document.getElementById('overReason').textContent = overReason;
   const isNew = score > 0 && score >= save.best;
   document.getElementById('newBest').classList.toggle('hidden', !isNew || score === 0);
@@ -293,6 +292,33 @@ function applyVersionLabels() {
   if (over) over.textContent = label;
 }
 
+/** Color ladder in How-to: shows same-size pairs grow into named orbs. */
+function fillOrbLadder() {
+  const el = document.getElementById('orbLadder');
+  if (!el || typeof ORBS === 'undefined') return;
+  el.innerHTML = '';
+  ORBS.forEach((def, i) => {
+    const step = document.createElement('span');
+    step.className = 'step';
+    step.title = def.label;
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = def.color;
+    dot.style.color = def.glow;
+    const size = 10 + Math.min(10, i);
+    dot.style.width = size + 'px';
+    dot.style.height = size + 'px';
+    step.appendChild(dot);
+    el.appendChild(step);
+    if (i < ORBS.length - 1) {
+      const arrow = document.createElement('span');
+      arrow.className = 'arrow';
+      arrow.textContent = '→';
+      el.appendChild(arrow);
+    }
+  });
+}
+
 // ---------- PWA + auto-update (same pattern as VoidRush / hole-game) ----------
 function safeReloadForUpdate() {
   if (window.__reloaded) return;
@@ -360,6 +386,7 @@ function registerSW() {
 
 // boot
 applyVersionLabels();
+fillOrbLadder();
 updateMenuStats();
 setScreen('menu');
 registerSW();

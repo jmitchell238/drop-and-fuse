@@ -60,7 +60,7 @@ function loadGame() {
     globalThis.__TEST__ = {
       GAME_VERSION, GAME_VERSION_LABEL, GAME_NAME,
       W, H, BIN, ORBS, DROP_Y, DROP_TYPES, DROP_COOLDOWN, MAX_TYPE, MAX_BODIES,
-      DANGER_Y, DANGER_HOLD, DANGER_GRACE, DANGER_STILL, GRAVITY, MERGE_COOLDOWN,
+      DANGER_Y, DANGER_HOLD, DANGER_GRACE, DANGER_STILL, GRAVITY, MERGE_COOLDOWN, MERGE_TOUCH,
       state: () => state,
       setState: (s) => { state = s; },
       bodies: () => bodies,
@@ -193,6 +193,48 @@ section('physics + merge');
   g.setBodies([m1, m2]);
   g.applyMerges();
   assertEq(g.bodies().length, 2, 'max tier does not merge');
+}
+
+section('merge on touch (not crush)');
+{
+  const { api: g } = loadGame();
+  g.startGame();
+  const r = g.ORBS[0].r;
+  // Exact geometric touch — used to FAIL (needed 1.5px penetration)
+  const a = g.makeBody(0, 160, 500);
+  const b = g.makeBody(0, 160 + r * 2, 500);
+  a.born = 1; b.born = 1; a.mergeLock = 0; b.mergeLock = 0;
+  const dist = Math.hypot(b.x - a.x, b.y - a.y);
+  assert(Math.abs(dist - r * 2) < 0.01, 'fixture is exact touch');
+  const pairs = g.findMerges([a, b]);
+  assertEq(pairs.length, 1, 'findMerges at exact touch');
+  g.setBodies([a, b]);
+  g.applyMerges();
+  assertEq(g.bodies().length, 1, 'touching same-type fuse');
+  assertEq(g.bodies()[0].type, 1, 'touch fuse → next tier');
+
+  // Settled side-by-side after physics (the "only when something lands on them" bug)
+  g.startGame();
+  const s1 = g.makeBody(1, 140, g.BIN.bottom - g.ORBS[1].r);
+  const s2 = g.makeBody(1, 140 + g.ORBS[1].r * 2 + 0.5, g.BIN.bottom - g.ORBS[1].r);
+  s1.born = 1; s2.born = 1;
+  s1.vx = 0; s1.vy = 0; s2.vx = 0; s2.vy = 0;
+  g.setBodies([s1, s2]);
+  for (let i = 0; i < 45; i++) g.updatePlay(1 / 60);
+  assert(g.merges() >= 1, 'side-by-side same orbs fuse after settle');
+  assert(g.bodies().some(x => x.type === 2), 'settled pair becomes next tier');
+
+  // Three same orbs → only pairwise (not one mega fuse)
+  g.startGame();
+  const t0 = g.makeBody(0, 120, 480); t0.born = 1; t0.mergeLock = 0;
+  const t1 = g.makeBody(0, 120 + r * 2, 480); t1.born = 1; t1.mergeLock = 0;
+  const t2 = g.makeBody(0, 120 + r * 4, 480); t2.born = 1; t2.mergeLock = 0;
+  g.setBodies([t0, t1, t2]);
+  g.applyMerges();
+  // One pair fuses → type-1 + leftover type-0 (two bodies)
+  assertEq(g.bodies().length, 2, 'three same → pair fuse leaves one');
+  assertEq(g.bodies().filter(x => x.type === 0).length, 1, 'one type-0 remains');
+  assertEq(g.bodies().filter(x => x.type === 1).length, 1, 'one type-1 created');
 }
 
 section('chain merge across frames');
@@ -379,6 +421,11 @@ section('orb ladder');
     assert(g.ORBS[i].score >= g.ORBS[i - 1].score, `score nondecreasing at ${i}`);
   }
   assert(g.DROP_TYPES < g.ORBS.length, 'drop pool smaller than full ladder');
+  // Every orb has a kid-facing name (no bare numbers as identity)
+  for (const o of g.ORBS) {
+    assert(typeof o.label === 'string' && o.label.length > 0, `label for type ${o.id}`);
+  }
+  assert(typeof g.MERGE_TOUCH === 'number' && g.MERGE_TOUCH > 0, 'MERGE_TOUCH configured');
 }
 
 // -------------------- summary --------------------

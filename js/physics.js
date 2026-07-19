@@ -152,6 +152,7 @@ function findMerges(bodies) {
   const pairs = [];
   const used = new Set();
   const n = bodies.length;
+  const touch = typeof MERGE_TOUCH === 'number' ? MERGE_TOUCH : 2.5;
   for (let i = 0; i < n; i++) {
     const a = bodies[i];
     if (!a.alive || a.mergeLock > 0 || used.has(a.id)) continue;
@@ -161,7 +162,9 @@ function findMerges(bodies) {
       if (a.type !== b.type) continue;
       if (a.type >= MAX_TYPE) continue; // max tier does not merge further
       const dist = Math.hypot(b.x - a.x, b.y - a.y);
-      if (dist < a.r + b.r - 1.5) {
+      // Touch (or tiny gap) is enough — do NOT require crush/penetration.
+      // Two of the same color/size always fuse; three nearby fuse two-at-a-time.
+      if (dist <= a.r + b.r + touch) {
         pairs.push([a, b]);
         used.add(a.id);
         used.add(b.id);
