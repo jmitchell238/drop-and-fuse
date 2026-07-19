@@ -250,6 +250,43 @@ button {
 
 .how b { color: var(--cyan); }
 
+.orb-ladder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 2px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.orb-ladder .step {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.orb-ladder .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 0 8px currentColor;
+  flex-shrink: 0;
+}
+
+.orb-ladder .arrow {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  margin: 0 1px;
+  opacity: 0.7;
+}
+
+.orb-ladder .name {
+  display: none;
+}
+
 .ver {
   margin: 8px 0 0;
   font-size: 0.72rem;

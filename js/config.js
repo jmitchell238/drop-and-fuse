@@ -7,7 +7,7 @@
 //   minor — features (systems, big content)
 //   patch — bugfixes, perf, polish
 // Keep CACHE in sw.js in sync: 'drop-and-fuse-' + GAME_VERSION
-const GAME_VERSION = '1.0.004';
+const GAME_VERSION = '1.1.001';
 const GAME_VERSION_LABEL = 'v' + GAME_VERSION;
 const GAME_NAME = 'Drop & Fuse';
 
@@ -42,6 +42,9 @@ const WALL_FRICTION = 0.96;
 const SLEEP_SPEED = 22;
 const SLEEP_TIME = 0.12;        // must stay slow this long before hard-sleep
 const MERGE_COOLDOWN = 0.08;
+// Same-type orbs fuse when touching or within this many px (physics settles
+// pairs at exact contact — requiring deep overlap made merges feel random).
+const MERGE_TOUCH = 2.5;
 const DROP_COOLDOWN = 0.35;
 const MAX_BODIES = 80;
 const SUBSTEPS = 4;

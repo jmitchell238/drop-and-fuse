@@ -1,5 +1,5 @@
 // Bump with GAME_VERSION in js/config.js (MAJOR.MINOR.PATCH).
-const CACHE = 'drop-and-fuse-1.0.004';
+const CACHE = 'drop-and-fuse-1.1.001';
 
 const ASSETS = [
   './',
@@ -54,7 +54,7 @@ function sameOrigin(url) {
 }
 
 function networkFirst(request) {
-  return fetch(request).then(res => {
+  return fetch(request, { cache: 'no-store' }).then(res => {
     if (res.ok && sameOrigin(request.url)) {
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(request, copy));
