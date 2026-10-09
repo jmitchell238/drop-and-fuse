@@ -1,33 +1,29 @@
 # Drop & Fuse
 
-Neon orb merge puzzle — drop, match, fuse, don’t overflow the bin.
+A neon orb-merge puzzle. Drop orbs into the bin, fuse matching ones into bigger ones, and don't let the pile overflow.
 
-**Play:** https://jmitchell238.github.io/drop-and-fuse/
+Play at https://jmitchell238.github.io/drop-and-fuse/
 
 ## Controls
 
 | Input | Action |
 |-------|--------|
-| Drag left/right + release | Choose drop column (always falls straight down) |
+| Drag left/right, then release | Pick a column and drop (orbs fall straight down) |
 | ← → / A D | Move |
 | Space / Enter / ↓ | Drop |
 | Esc | Menu |
 
-**Fuse rule:** two orbs of the **same size/color** fuse when they **touch**.
-Three in a pile still fuse two at a time. Orbs show **names** (Spark, Mint…), not mystery numbers.
+Two orbs of the same size and color fuse when they touch. If three end up together, they fuse two at a time. Each orb size has a name (Spark, Mint, and so on) instead of a number.
 
-## Stack
+## Running locally
 
-Static HTML/CSS/Canvas + custom circle physics. Installable PWA (`manifest` + service worker). Progress in `localStorage`.
+```bash
+python3 -m http.server 8080
+```
 
-## Versioning
+Then open http://localhost:8080.
 
-Same scheme as VoidRush (`hole-game`):
-
-- `GAME_VERSION` in `js/config.js` — `MAJOR.MINOR.PATCH` (patch zero-padded to 3 digits)
-- UI shows `Drop & Fuse v…` (corner tag + menu / game-over lines)
-- Keep `CACHE` in `sw.js` in sync: `'drop-and-fuse-' + GAME_VERSION`
-- SW + remote `config.js` version check auto-reload when not mid-game
+Plain HTML, CSS and canvas with custom circle physics. Installable as a PWA, and progress is saved in localStorage.
 
 ## Tests
 
@@ -37,16 +33,16 @@ node tests/run.mjs
 
 Covers:
 
-- First-drop / iPad input regression
-- Merge, chain merge, max-tier no-merge
-- Physics (fall, settle, walls)
-- Danger-line game over
-- Save / high score persistence
-- Version ↔ service worker cache sync
-- PWA shell (no full-screen play overlay)
+- First drop and iPad input
+- Merging, chain merges, and the top size not merging
+- Physics: falling, settling, walls
+- Game over at the danger line
+- Saving and the high score
+- Version and service worker cache staying in sync
+- The PWA shell
 
-## Local
+## Versioning
 
-```bash
-python3 -m http.server 8080
-```
+`GAME_VERSION` in `js/config.js` is `MAJOR.MINOR.PATCH` with a three-digit patch. When you bump it, set `CACHE` in `sw.js` to `'drop-and-fuse-' + GAME_VERSION`.
+
+The version shows in the corner, on the menu and on the game-over screen. Installed copies check the live `js/config.js` for a newer version and reload, but not in the middle of a game.
